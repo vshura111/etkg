@@ -31,7 +31,18 @@ class EsetRegister(object):
             self.driver.switch_to.new_window('tab')
             self.window_handle = self.driver.current_window_handle
         self.driver.get('https://login.eset.com/Register')
-        uCE(self.driver, f"return {GET_EBID}('email') != null")
+
+try:
+    uCE(self.driver, f"return {GET_EBID}('email') != null")
+except Exception:
+    print("REGISTRATION ERROR")
+    print("Current URL:", self.driver.current_url)
+    print("Page title:", self.driver.title)
+
+    self.driver.save_screenshot("register_debug.png")
+
+    print("Screenshot saved: register_debug.png")
+    raise
         logging.info('Register page is loaded!')
         console_log('Register page is loaded!', OK, silent_mode=SILENT_MODE)
 
