@@ -30,19 +30,21 @@ class EsetRegister(object):
         if isinstance(self.email_obj, WEB_WRAPPER_EMAIL_APIS_CLASSES):
             self.driver.switch_to.new_window('tab')
             self.window_handle = self.driver.current_window_handle
-        self.driver.get('https://login.eset.com/Register')
-
-try:
-    uCE(self.driver, f"return {GET_EBID}('email') != null")
-except Exception:
-    print("REGISTRATION ERROR")
-    print("Current URL:", self.driver.current_url)
-    print("Page title:", self.driver.title)
-
-    self.driver.save_screenshot("register_debug.png")
-
-    print("Screenshot saved: register_debug.png")
-    raise
+        try:
+            self.driver.get('https://login.eset.com/Register')
+            uCE(self.driver, f"return {GET_EBID}('email') != null")
+        except Exception:
+            print('REGISTRATION ERROR: expected email field was not found or page failed to load', flush=True)
+            try:
+                print('Current URL:', self.driver.current_url, flush=True)
+                print('Page title:', self.driver.title, flush=True)
+                if self.driver.save_screenshot('register_debug.png'):
+                    print('Screenshot saved: register_debug.png', flush=True)
+                else:
+                    print('Screenshot could not be saved', flush=True)
+            except Exception as debug_error:
+                print('Unable to collect browser diagnostics:', debug_error, flush=True)
+            raise
         logging.info('Register page is loaded!')
         console_log('Register page is loaded!', OK, silent_mode=SILENT_MODE)
 
