@@ -106,12 +106,20 @@ jobs:
 
           if [[ "$ACCOUNT" != "0" ]]; then
             python3 main.py --auto-detect-browser --account --email-api "$MAIL" --skip-update-check --no-logo --disable-progress-bar --disable-logging --repeat "$ACCOUNT"
+            if [ ! -s "ESET ACCOUNTS.txt" ]; then
+              echo "::error::Account generation failed: ESET ACCOUNTS.txt is missing or empty"
+              exit 1
+            fi
             echo "Account:" >> $GITHUB_STEP_SUMMARY
             cat ./*ACCOUNTS.txt >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "None" >> $GITHUB_STEP_SUMMARY
           fi
 
           if [[ "$KEY" != "0" ]]; then
             python3 main.py --auto-detect-browser "$KEY_TYPE" --email-api "$MAIL" --skip-update-check --no-logo --disable-progress-bar --disable-logging --repeat "$KEY"
+            if [ ! -s "ESET KEYS.txt" ]; then
+              echo "::error::Key generation failed: ESET KEYS.txt is missing or empty"
+              exit 1
+            fi
             echo -e "\nKey:" >> $GITHUB_STEP_SUMMARY
             cat ./*KEYS.txt >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "None" >> $GITHUB_STEP_SUMMARY
           fi
@@ -132,12 +140,34 @@ jobs:
 
           if ($ACCOUNT -ne 0) {
             python main.py --auto-detect-browser --account --email-api "$MAIL" --skip-update-check --no-logo --disable-progress-bar --disable-logging --repeat $ACCOUNT
+            if ($LASTEXITCODE -ne 0) { throw "Account generation script exited with code $LASTEXITCODE" }
+            if (-not (Test-Path -LiteralPath 'ESET ACCOUNTS.txt' -PathType Leaf)) {
+              throw "Account generation failed: ESET ACCOUNTS.txt was not created"
+            }
+            if ((Get-Item -LiteralPath 'ESET ACCOUNTS.txt').Length -eq 0) {
+              throw "Account generation failed: ESET ACCOUNTS.txt is empty"
+            }
             echo "Account:" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
             Get-Content -Path ./*ACCOUNTS.txt -ErrorAction SilentlyContinue | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
           }
 
           if ($KEY -ne 0) {
             python main.py --auto-detect-browser "$KEY_TYPE" --email-api "$MAIL" --skip-update-check --no-logo --disable-progress-bar --disable-logging --repeat $KEY
+            if ($LASTEXITCODE -ne 0) { throw "Key generation script exited with code $LASTEXITCODE" }
+            if (-not (Test-Path -LiteralPath 'ESET KEYS.txt' -PathType Leaf)) {
+              throw "Key generation failed: ESET KEYS.txt was not created"
+            }
+            if ((Get-Item -LiteralPath 'ESET KEYS.txt').Length -eq 0) {
+              throw "Key generation failed: ESET KEYS.txt is empty"
+            }
             echo "`nKey:" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
             Get-Content -Path ./*KEYS.txt -ErrorAction SilentlyContinue | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
           }
+
+      - name: Upload registration debug
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: registration-debug
+          path: etkg/register_debug.png
+          if-no-files-found: ignore
