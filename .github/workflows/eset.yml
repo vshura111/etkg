@@ -106,7 +106,7 @@ jobs:
 
           if [[ "$ACCOUNT" != "0" ]]; then
             python3 main.py --auto-detect-browser --account --email-api "$MAIL" --skip-update-check --no-logo --disable-progress-bar --disable-logging --repeat "$ACCOUNT"
-            if [ ! -s "ESET ACCOUNTS.txt" ]; then
+            if ! find . -maxdepth 1 -type f -name "*ESET ACCOUNTS.txt" -size +0c -print -quit | grep -q .; then
               echo "::error::Account generation failed: ESET ACCOUNTS.txt is missing or empty"
               exit 1
             fi
@@ -116,7 +116,7 @@ jobs:
 
           if [[ "$KEY" != "0" ]]; then
             python3 main.py --auto-detect-browser "$KEY_TYPE" --email-api "$MAIL" --skip-update-check --no-logo --disable-progress-bar --disable-logging --repeat "$KEY"
-            if [ ! -s "ESET KEYS.txt" ]; then
+            if ! find . -maxdepth 1 -type f -name "*ESET KEYS.txt" -size +0c -print -quit | grep -q .; then
               echo "::error::Key generation failed: ESET KEYS.txt is missing or empty"
               exit 1
             fi
@@ -141,11 +141,9 @@ jobs:
           if ($ACCOUNT -ne 0) {
             python main.py --auto-detect-browser --account --email-api "$MAIL" --skip-update-check --no-logo --disable-progress-bar --disable-logging --repeat $ACCOUNT
             if ($LASTEXITCODE -ne 0) { throw "Account generation script exited with code $LASTEXITCODE" }
-            if (-not (Test-Path -LiteralPath 'ESET ACCOUNTS.txt' -PathType Leaf)) {
-              throw "Account generation failed: ESET ACCOUNTS.txt was not created"
-            }
-            if ((Get-Item -LiteralPath 'ESET ACCOUNTS.txt').Length -eq 0) {
-              throw "Account generation failed: ESET ACCOUNTS.txt is empty"
+            $accountFile = Get-ChildItem -File -Filter '*ESET ACCOUNTS.txt' | Where-Object { $_.Length -gt 0 } | Select-Object -First 1
+            if ($null -eq $accountFile) {
+              throw "Account generation failed: dated ESET ACCOUNTS.txt is missing or empty"
             }
             echo "Account:" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
             Get-Content -Path ./*ACCOUNTS.txt -ErrorAction SilentlyContinue | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
@@ -154,11 +152,9 @@ jobs:
           if ($KEY -ne 0) {
             python main.py --auto-detect-browser "$KEY_TYPE" --email-api "$MAIL" --skip-update-check --no-logo --disable-progress-bar --disable-logging --repeat $KEY
             if ($LASTEXITCODE -ne 0) { throw "Key generation script exited with code $LASTEXITCODE" }
-            if (-not (Test-Path -LiteralPath 'ESET KEYS.txt' -PathType Leaf)) {
-              throw "Key generation failed: ESET KEYS.txt was not created"
-            }
-            if ((Get-Item -LiteralPath 'ESET KEYS.txt').Length -eq 0) {
-              throw "Key generation failed: ESET KEYS.txt is empty"
+            $keyFile = Get-ChildItem -File -Filter '*ESET KEYS.txt' | Where-Object { $_.Length -gt 0 } | Select-Object -First 1
+            if ($null -eq $keyFile) {
+              throw "Key generation failed: dated ESET KEYS.txt is missing or empty"
             }
             echo "`nKey:" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
             Get-Content -Path ./*KEYS.txt -ErrorAction SilentlyContinue | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
