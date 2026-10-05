@@ -100,15 +100,29 @@ jobs:
           KEY_TYPE="${{ steps.vars.outputs.key_type }}"
 
           if [[ "$ACCOUNT" != "0" ]]; then
-            python3 main.py --auto-detect-browser --account --email-api "$MAIL" --skip-update-check --no-logo --disable-progress-bar --disable-logging --repeat "$ACCOUNT"
-            echo "Account:" >> $GITHUB_STEP_SUMMARY
-            cat ./*ACCOUNTS.txt >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "None" >> $GITHUB_STEP_SUMMARY
+            python3 main.py --auto-detect-browser --account --email-api "$MAIL" --skip-update-check --no-logo --disable-progress-bar --repeat "$ACCOUNT"
+
+            echo "### Account result" >> "$GITHUB_STEP_SUMMARY"
+            if compgen -G "./*ACCOUNTS.txt" > /dev/null; then
+              cat ./*ACCOUNTS.txt >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "❌ No ACCOUNTS.txt file was generated. The generator did not complete successfully." >> "$GITHUB_STEP_SUMMARY"
+              echo "::error::No account output was generated. Check the generator log above; the selected mail provider may have failed."
+              exit 1
+            fi
           fi
 
           if [[ "$KEY" != "0" ]]; then
-            python3 main.py --auto-detect-browser "$KEY_TYPE" --email-api "$MAIL" --skip-update-check --no-logo --disable-progress-bar --disable-logging --repeat "$KEY"
-            echo -e "\nKey:" >> $GITHUB_STEP_SUMMARY
-            cat ./*KEYS.txt >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "None" >> $GITHUB_STEP_SUMMARY
+            python3 main.py --auto-detect-browser "$KEY_TYPE" --email-api "$MAIL" --skip-update-check --no-logo --disable-progress-bar --repeat "$KEY"
+
+            echo -e "\n### Key result" >> "$GITHUB_STEP_SUMMARY"
+            if compgen -G "./*KEYS.txt" > /dev/null; then
+              cat ./*KEYS.txt >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "❌ No KEYS.txt file was generated. The generator did not complete successfully." >> "$GITHUB_STEP_SUMMARY"
+              echo "::error::No key output was generated. Check the generator log above; the selected mail provider may have failed."
+              exit 1
+            fi
           fi
 
       - name: Setup & Run Script (Windows)
@@ -125,14 +139,40 @@ jobs:
           $MAIL = "${{ steps.vars.outputs.mail }}"
           $KEY_TYPE = "${{ steps.vars.outputs.key_type }}"
 
-          if ($ACCOUNT -ne 0) {
-            python main.py --auto-detect-browser --account --email-api "$MAIL" --skip-update-check --no-logo --disable-progress-bar --disable-logging --repeat $ACCOUNT
-            echo "Account:" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-            Get-Content -Path ./*ACCOUNTS.txt -ErrorAction SilentlyContinue | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          if ($ACCOUNT -ne "0") {
+            python main.py --auto-detect-browser --account --email-api "$MAIL" --skip-update-check --no-logo --disable-progress-bar --repeat $ACCOUNT
+            if ($LASTEXITCODE -ne 0) {
+              Write-Error "Generator exited with code $LASTEXITCODE while creating accounts."
+              exit $LASTEXITCODE
+            }
+
+            "### Account result" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+            $accountFiles = @(Get-ChildItem -Path . -Filter "*ACCOUNTS.txt" -File -ErrorAction SilentlyContinue)
+            if ($accountFiles.Count -gt 0) {
+              Get-Content -Path $accountFiles.FullName | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+            }
+            else {
+              "❌ No ACCOUNTS.txt file was generated. The generator did not complete successfully." | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+              Write-Error "No account output was generated. Check the generator log above; the selected mail provider may have failed."
+              exit 1
+            }
           }
 
-          if ($KEY -ne 0) {
-            python main.py --auto-detect-browser "$KEY_TYPE" --email-api "$MAIL" --skip-update-check --no-logo --disable-progress-bar --disable-logging --repeat $KEY
-            echo "`nKey:" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
-            Get-Content -Path ./*KEYS.txt -ErrorAction SilentlyContinue | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          if ($KEY -ne "0") {
+            python main.py --auto-detect-browser "$KEY_TYPE" --email-api "$MAIL" --skip-update-check --no-logo --disable-progress-bar --repeat $KEY
+            if ($LASTEXITCODE -ne 0) {
+              Write-Error "Generator exited with code $LASTEXITCODE while creating keys."
+              exit $LASTEXITCODE
+            }
+
+            "`n### Key result" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+            $keyFiles = @(Get-ChildItem -Path . -Filter "*KEYS.txt" -File -ErrorAction SilentlyContinue)
+            if ($keyFiles.Count -gt 0) {
+              Get-Content -Path $keyFiles.FullName | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+            }
+            else {
+              "❌ No KEYS.txt file was generated. The generator did not complete successfully." | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+              Write-Error "No key output was generated. Check the generator log above; the selected mail provider may have failed."
+              exit 1
+            }
           }
